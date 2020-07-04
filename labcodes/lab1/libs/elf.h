@@ -26,9 +26,9 @@ struct elfhdr {
 
 /* program section header */
 struct proghdr {
-    uint32_t p_type;   // loadable code or data, dynamic linking info,etc.
-    uint32_t p_offset; // file offset of segment
-    uint32_t p_va;     // virtual address to map segment
+    uint32_t p_type;   // loadable code or data, dynamic linking info,etc. 段类型
+    uint32_t p_offset; // file offset of segment  段偏移
+    uint32_t p_va;     // virtual address to map segment  存放（虚拟）地址
     uint32_t p_pa;     // physical address, not used
     uint32_t p_filesz; // size of segment in file
     uint32_t p_memsz;  // size of segment in memory (bigger if contains bss）

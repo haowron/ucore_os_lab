@@ -12,11 +12,13 @@
 # start address should be 0:7c00, in real mode, the beginning address of the running bootloader
 .globl start
 start:
+# 在16位 8086 模式下运行
 .code16                                             # Assemble for 16-bit mode
     cli                                             # Disable interrupts
     cld                                             # String operations increment
 
     # Set up the important data segment registers (DS, ES, SS).
+    # 初始化
     xorw %ax, %ax                                   # Segment number zero
     movw %ax, %ds                                   # -> Data Segment
     movw %ax, %es                                   # -> Extra Segment
@@ -27,18 +29,20 @@ start:
     #  address line 20 is tied low, so that addresses higher than
     #  1MB wrap around to zero by default. This code undoes this.
 seta20.1:
+    # 通过jump清空input缓存
     inb $0x64, %al                                  # Wait for not busy(8042 input buffer empty).
     testb $0x2, %al
     jnz seta20.1
-
+    # 向0x64发送0xd1以激活保护模式（第一步）
     movb $0xd1, %al                                 # 0xd1 -> port 0x64
     outb %al, $0x64                                 # 0xd1 means: write data to 8042's P2 port
 
 seta20.2:
+    # 通过jump清空input缓存
     inb $0x64, %al                                  # Wait for not busy(8042 input buffer empty).
     testb $0x2, %al
     jnz seta20.2
-
+    # 向0x60发送0xdf以激活保护模式（第二步）
     movb $0xdf, %al                                 # 0xdf -> port 0x60
     outb %al, $0x60                                 # 0xdf = 11011111, means set P2's A20 bit(the 1 bit) to 1
 
@@ -46,18 +50,22 @@ seta20.2:
     # and segment translation that makes virtual addresses
     # identical to physical addresses, so that the
     # effective memory map does not change during the switch.
+    # 初始化GDT表：
     lgdt gdtdesc
+    # 向cr0发送1以进入保护模式（之前的是激活）
     movl %cr0, %eax
     orl $CR0_PE_ON, %eax
     movl %eax, %cr0
 
     # Jump to next instruction, but in 32-bit code segment.
     # Switches processor into 32-bit mode.
+    # 长跳转更新cs地址
     ljmp $PROT_MODE_CSEG, $protcseg
 
 .code32                                             # Assemble for 32-bit mode
 protcseg:
     # Set up the protected-mode data segment registers
+    # 设置寄存器，建立堆栈
     movw $PROT_MODE_DSEG, %ax                       # Our data segment selector
     movw %ax, %ds                                   # -> DS: Data Segment
     movw %ax, %es                                   # -> ES: Extra Segment
@@ -68,6 +76,7 @@ protcseg:
     # Set up the stack pointer and call into C. The stack region is from 0--start(0x7c00)
     movl $0x0, %ebp
     movl $start, %esp
+    # 进入boot主方法（参照bootmain.c）
     call bootmain
 
     # If bootmain returns (it shouldn't), loop.
